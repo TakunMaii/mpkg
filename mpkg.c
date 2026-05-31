@@ -39,7 +39,9 @@ char** CollectFiles(char **file_pathes, size_t file_count, size_t *all_file_coun
         {
             DIR *dir = opendir(path);
             if(!dir) continue;
+#ifdef DEBUG
             printf("Enter Dir %s\n", path);
+#endif
 
             size_t sub_capacity = 10;
             size_t sub_size = 0;
@@ -105,14 +107,18 @@ char** CollectFiles(char **file_pathes, size_t file_count, size_t *all_file_coun
             }
             free(sub_files);
 
+#ifdef DEBUG
             printf("Exit dir %s\n", path);
+#endif
         }
         else if(S_ISREG(st.st_mode))
         {
             // add the path to files
             files[size] = (char*)malloc(RES_LABEL_LENGTH);
             strcpy(files[size], path);
+#ifdef DEBUG
             printf("Collected %s\n", path);
+#endif
             size ++;
             if(size == capacity)// if full, double capacity
             {
@@ -167,6 +173,7 @@ int MakeMpkg(const char *pkg_path, char **file_pathes, size_t file_count)
             printf("Failed to find file %s, jump!\n", file_pathes[i]);
             continue;
         }
+
         printf("Packing file %s...", file_pathes[i]);
 
         // seek file size
@@ -199,7 +206,9 @@ int MakeMpkg(const char *pkg_path, char **file_pathes, size_t file_count)
             fclose(file);
             continue;
         }
+
         printf(", Success!\n");
+
         success_count++;
 
         fclose(file);
@@ -227,12 +236,14 @@ int main(int argn, char **argv)
     size_t file_count;
     char **files = CollectFiles(argv + 2, argn - 2, &file_count);
 
+#ifdef DEBUG
     printf("Collected %d files:\n", file_count);
     for(size_t i = 0; i < file_count; i++)
     {
         printf("    %s\n", files[i]);
     }
     printf("\n");
+#endif
 
     int success_count = MakeMpkg(argv[1], files, file_count);
     return 0;
