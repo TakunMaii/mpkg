@@ -7,6 +7,7 @@ This is a simple resources packing system.
 + `assets/` - example files
 
 ## Usage
+For real-world usage you can check out [Notgate](https://github.com/TakunMaii/Notgate).
 
 Packer program:
 ```bash
