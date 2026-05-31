@@ -20,6 +20,26 @@ typedef struct {
     long length;
 } MpkgResLabel;
 
+void SortFiles(char **files, size_t file_count)
+{
+    if(file_count <= 1) return;
+    size_t i = -1, j = file_count;
+    size_t pivot = 0;
+    while(1)
+    {
+        do{i++;}while(strcmp(files[i], files[pivot]) < 0);
+        do{j--;}while(strcmp(files[j], files[pivot]) > 0);
+        if(i >= j) break;
+
+        char *temp = files[i];
+        files[i] = files[j];
+        files[j] = temp;
+    }
+
+    SortFiles(files, j + 1);
+    SortFiles(files + j + 1, file_count - j - 1);
+}
+
 char** CollectFiles(char **file_pathes, size_t file_count, size_t *all_file_count)
 {
     size_t capacity = file_count;
@@ -238,6 +258,17 @@ int main(int argn, char **argv)
 
 #ifdef DEBUG
     printf("Collected %d files:\n", file_count);
+    for(size_t i = 0; i < file_count; i++)
+    {
+        printf("    %s\n", files[i]);
+    }
+    printf("\n");
+#endif
+
+    SortFiles(files, file_count);
+
+#ifdef DEBUG
+    printf("Sorted %d files:\n", file_count);
     for(size_t i = 0; i < file_count; i++)
     {
         printf("    %s\n", files[i]);

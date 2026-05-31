@@ -66,16 +66,36 @@ char* FetchDataFromMpkg(Mpkg pkg, const char* path, long *length)
     char *pointer = pkg.start_pointer;
     MpkgHeader *header = (MpkgHeader*)pointer;
     pointer += sizeof(MpkgHeader);
-    for(uint32_t i = 0; i < header->item_count ; i++)
+
+    uint32_t low = 0, high = header->item_count - 1;
+    while(true)
     {
-        MpkgResLabel *label = (MpkgResLabel*)pointer;
+        uint32_t i = (low + high) / 2;
+
+        MpkgResLabel *label = (MpkgResLabel*)(pointer + i * sizeof(MpkgResLabel));
+
         if(!strcmp(path, label->path))
         {
             *length = label->length;
             return pkg.start_pointer + label->offset;
         }
+        else
+        {
+            if(low == high) break;
+            if(high - low == 1 & i == low) {low = high;continue;}
+            if(high - low == 1 & i == high) {high = low;continue;}
 
-        pointer += sizeof(MpkgResLabel);
+            if(strcmp(path, label->path) < 0)
+            {
+                high = i;
+                continue;
+            }
+            else
+            {
+                low = i;
+                continue;
+            }
+        }
     }
 
     printf("Cannot find %s\n", path);

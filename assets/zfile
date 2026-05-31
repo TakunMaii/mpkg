@@ -1,0 +1,4 @@
+
+
+build: mpkg.c
+	gcc mpkg.c -o mpkg
