@@ -1,0 +1,118 @@
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+
+//MPG
+#define MPKGMAGIC 0x0047504D
+
+typedef struct {
+    char *start_pointer;
+    long length;
+} Mpkg;
+
+typedef struct {
+    uint32_t magic;
+    uint32_t item_count;
+} MpkgHeader;
+
+typedef struct {
+    char path[128];
+    long offset;
+    long length;
+} MpkgResLabel;
+
+// returns successfully packed file number
+int MakeMpkg(const char *pkg_path, char **file_pathes, size_t file_count)
+{
+    FILE *pkg_file = fopen(pkg_path, "wb");
+    if(!pkg_file)
+    {
+        return 0;
+    }
+    
+    MpkgHeader header = (MpkgHeader){
+        .magic = MPKGMAGIC,
+        .item_count = file_count
+    };
+
+    MpkgResLabel *reslabels = (MpkgResLabel*)malloc(file_count * sizeof(MpkgResLabel));
+    for(size_t i = 0; i < file_count; i++)
+    {
+        strcpy(reslabels[i].path, file_pathes[i]);
+    }
+
+    fwrite(&header, sizeof(MpkgHeader), 1, pkg_file);
+    // now the labels does not contain offset and size info
+    fwrite(reslabels, sizeof(MpkgResLabel), file_count, pkg_file);
+    
+    size_t success_count = 0;
+    long offset = sizeof(MpkgHeader) + file_count * sizeof(MpkgResLabel);
+    for (size_t i = 0; i < file_count; i++)
+    {
+        FILE *file = fopen(file_pathes[i], "r");
+        if(!file)
+        {
+            printf("Failed to find file %s, jump!\n", file_pathes[i]);
+            continue;
+        }
+        printf("Packing file %s...", file_pathes[i]);
+
+        // seek file size
+        fseek(file, 0, SEEK_END);
+        long size = ftell(file);
+        rewind(file);
+
+        // save offset and size to labels
+        reslabels[i].offset = offset;
+        reslabels[i].length = size;
+        offset += size;
+
+        // read data
+        char *data = (char*)malloc(size);
+        size_t read_result = fread(data, size, 1, file);
+        if(read_result != 1)
+        {
+            printf("\n    Failed to read file %s, expected %d, got %d\n",
+                   file_pathes[i], 1, read_result);
+            fclose(file);
+            continue;
+        }
+
+        // write data to pkg
+        size_t write_result = fwrite(data, size, 1, pkg_file);
+        if(write_result != 1)
+        {
+            printf("\n    Failed to write file %s, expected %d, got %d\n",
+                   file_pathes[i], 1, write_result);
+            fclose(file);
+            continue;
+        }
+        printf(", Success!\n");
+        success_count++;
+
+        fclose(file);
+    }
+
+    // rewrite labels with offset and size info
+    fseek(pkg_file, sizeof(MpkgHeader), SEEK_SET);
+    fwrite(reslabels, sizeof(MpkgResLabel), file_count, pkg_file);
+
+    fclose(pkg_file);
+
+    printf("Provided %d, Success %d.\n", file_count, success_count);
+
+    return success_count;
+}
+
+int main(int argn, char **argv)
+{
+    if(argn < 2)
+    {
+        printf("Usage: %s [output.pak] [file1] [file2] ...\n", argv[0]);
+        return 1;
+    }
+
+    int success_count = MakeMpkg(argv[1], argv + 2, argn - 2);
+    return 0;
+}
